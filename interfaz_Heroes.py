@@ -20,7 +20,7 @@ CAJA = (30, 30, 30)
 
 fuente = pygame.font.SysFont("Segoe UI Emoji", 28)
 fuente_titulo = pygame.font.SysFont("Segoe UI Emoji", 38)
-fuente_mensaje = pygame.font.SysFont("Segoe UI Emoji", 20)
+fuente_mensaje = pygame.font.SysFont("Segoe UI Emoji", 18)
 
 class Boton:
     def __init__(self, x, y, w, h, texto, color_fondo, color_texto):
@@ -39,11 +39,15 @@ class Boton:
         return evento.type == pygame.MOUSEBUTTONDOWN and self.rect.collidepoint(evento.pos)
 
 lista = ListaHeroes()
+lista.agregar_heroe("Aldor", 5, 50, 20)
+lista.agregar_heroe("Brakus", 7, 50, 25)
+lista.agregar_heroe("Celes", 6, 50, 30)
+
 
 mensajes = []
 
 def mostrar_mensajes(texto):
-    if len(mensajes) >= 4:
+    if len(mensajes) >= 8:
         mensajes.pop(0)
     mensajes.append(texto)
 
@@ -70,11 +74,12 @@ def mejorar_y_mostrar_mensajes(nombre, inc_vida, inc_ataque):
     else:
         mostrar_mensajes(f"❌ No se encontró al héroe {nombre}.")
 
-boton_agregar = Boton(600, 150, 150, 40, "Agregar", VERDE, (0, 200, 0))
-boton_eliminar = Boton(600, 210, 150, 40, "Eliminar", ROJO, (255, 100, 100))
-boton_mejorar = Boton(600, 270, 150, 40, "Mejorar", AZUL, (100, 180, 255))
-boton_batalla = Boton(600, 330, 150, 40, "Iniciar Batalla", (255, 230, 90), (255, 255, 150))
-boton_salir = Boton(600, 390, 150, 40, "Salir", GRIS, (180, 180, 180))
+boton_agregar = Boton(600, 100, 150, 40, "Agregar", VERDE, (0, 200, 0))
+boton_eliminar = Boton(600, 150, 150, 40, "Eliminar", ROJO, (255, 100, 100))
+boton_mejorar = Boton(600, 200, 150, 40, "Mejorar", AZUL, (100, 180, 255))
+boton_batalla = Boton(600, 250, 150, 40, "Batalla", (250, 220, 70), (180, 180, 180))
+boton_salir = Boton(600, 300, 150, 40, "Salir", GRIS, (180, 180, 180))
+
 
 def iniciar_batalla(turno_actual=None):
     pantalla.fill(NEGRO)
@@ -107,7 +112,7 @@ def iniciar_batalla(turno_actual=None):
     pygame.display.flip()
 
 
-def dibujar_lista_heroes():
+def dibujar_lista_heroes(turno_actual=None):
     pantalla.fill(NEGRO)
 
     titulo = fuente_titulo.render("🧙‍♂️ Héroes en la Arena", True, BLANCO)
@@ -121,13 +126,13 @@ def dibujar_lista_heroes():
         y += 40
         actual = actual.siguiente
 
-    for b in [boton_agregar, boton_eliminar, boton_mejorar, boton_salir]:
+    for b in [boton_agregar, boton_eliminar, boton_mejorar, boton_batalla, boton_salir]:
         b.dibujar(pantalla)
 
-    pygame.draw.rect(pantalla, (30, 30, 30), (30, 450, 740, 120), border_radius=10)
-    pantalla.blit(fuente.render("📜 Registro de eventos:", True, VERDE), (40, 455))
+    pygame.draw.rect(pantalla, (30, 30, 30), (30, 350, 740, 220), border_radius=10)
+    pantalla.blit(fuente.render("📜 Registro de eventos:", True, VERDE), (40, 360))
 
-    y_texto = 490
+    y_texto = 395
     for mensaje in mensajes:
         texto_renderizado = fuente_mensaje.render(mensaje, True, BLANCO)
         pantalla.blit(texto_renderizado, (50, y_texto))
@@ -159,25 +164,30 @@ def pedir_texto(mensaje):
                     texto += evento.unicode
     return texto
 
-def simular_batalla(rondas=5, turno_delay_ms=700):
+def simular_batalla(rondas=5, turno_delay_ms=1500):
     turnos = ListaCircularTurnos()
     actual = lista.cabeza
-    count = 0
+    contador = 0
     while actual:
         if actual.vida > 0:
             turnos.agregar_turno(actual.nombre)
-            count += 1
+            contador += 1
         actual = actual.siguiente
 
-    if count <= 1:
-        agregar_y_mostrar_mensajes("⚠️ No hay suficientes héroes para combatir.")
+    if contador <= 1:
+        mostrar_mensajes("⚠️ No hay suficientes héroes para combatir.")
         return
 
-    agregar_y_mostrar_mensajes("🔥 Comienza la batalla!")
+    mostrar_mensajes("🔥 Comienza la batalla!")
     pygame.event.pump()
 
     for ronda in range(1, rondas + 1):
-        agregar_y_mostrar_mensajes(f"🔁 Ronda {ronda} iniciada")
+        for evento in pygame.event.get():
+            if evento.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+
+        mostrar_mensajes(f"🔁 Ronda {ronda} iniciada")
         jugadores_en_ronda = len(turnos.mostrar_turnos())
         for i in range(jugadores_en_ronda):
             nombre_turno = turnos.siguiente_turno()
@@ -186,34 +196,34 @@ def simular_batalla(rondas=5, turno_delay_ms=700):
 
             dibujar_lista_heroes(turno_actual=nombre_turno)
 
-            her = lista.buscar_heroe(nombre_turno)
-            if not her or her.PV <= 0:
-                if her and her.PV <= 0:
+            heroe = lista.buscar_heroe(nombre_turno)
+            if not heroe or heroe.vida <= 0:
+                if heroe and heroe.vida <= 0:
                     turnos.eliminar_turno(nombre_turno)
-                agregar_y_mostrar_mensajes(f"❌ {nombre_turno} no disponible para turno.")
+                mostrar_mensajes(f"❌ {nombre_turno} no disponible para turno.")
                 pygame.event.pump()
                 pygame.time.delay(150)
                 continue
 
             accion = random.choice(["ataque", "curacion", "pasar"])
-            valor = random.randint(5, 30)
+            valor = random.randint(5, 15)
 
             if accion == "curacion":
-                her.PV += valor
-                agregar_y_mostrar_mensajes(f"💚 {nombre_turno} se curó +{valor} PV (PV now: {her.PV})")
+                heroe.vida += valor
+                mostrar_mensajes(f"💚 {nombre_turno} se curó +{valor} puntos (vida: {heroe.vida})")
             elif accion == "ataque":
                 objetivo = turnos.obtener_objetivo_aleatorio(nombre_turno, lista)
                 if objetivo:
-                    objetivo.PV -= valor
-                    agregar_y_mostrar_mensajes(f"💥 {nombre_turno} atacó a {objetivo.nombre} (-{valor} PV, queda {max(0, objetivo.PV)})")
-                    if objetivo.PV <= 0:
-                        agregar_y_mostrar_mensajes(f"☠️ {objetivo.nombre} ha caído")
+                    objetivo.vida -= valor
+                    mostrar_mensajes(f"💥 {nombre_turno} atacó a {objetivo.nombre} (-{valor} vida, vida restante: {max(0, objetivo.vida)})")
+                    if objetivo.vida <= 0:
+                        mostrar_mensajes(f"☠️ {objetivo.nombre} ha caído")
                         lista.eliminar_heroe(objetivo.nombre)
                         turnos.eliminar_turno(objetivo.nombre)
                 else:
-                    agregar_y_mostrar_mensajes(f"⚠️ {nombre_turno} no encontró objetivo")
+                    mostrar_mensajes(f"⚠️ {nombre_turno} no encontró objetivo")
             else:
-                agregar_y_mostrar_mensajes(f"😐 {nombre_turno} pasó turno")
+                mostrar_mensajes(f"😐 {nombre_turno} pasó turno")
 
             dibujar_lista_heroes(turno_actual=nombre_turno)
             for i in range(3):
@@ -226,7 +236,7 @@ def simular_batalla(rondas=5, turno_delay_ms=700):
         if not turnos.cabeza or len(turnos.mostrar_turnos()) <= 1:
             break
 
-    agregar_y_mostrar_mensajes("🏁 Fin de la batalla")
+    mostrar_mensajes("🏁 Fin de la batalla")
     actual = lista.cabeza
     ganador = None
     mayor_vida = -1
@@ -237,9 +247,9 @@ def simular_batalla(rondas=5, turno_delay_ms=700):
         actual = actual.siguiente
 
     if ganador:
-        agregar_y_mostrar_mensajes(f"🏆 {ganador} es el héroe con mayor PV ({mayor_vida})")
+        mostrar_mensajes(f"🏆 {ganador} es el héroe con mayor vida ({mayor_vida})")
     else:
-        agregar_y_mostrar_mensajes("💀 No quedó ningún héroe vivo")
+        mostrar_mensajes("💀 No quedó ningún héroe vivo")
 
     for i in range(6):
         dibujar_lista_heroes()
@@ -272,7 +282,7 @@ while ejecutando:
             mejorar_y_mostrar_mensajes(nombre, inc_vida, inc_ataque)
 
         if boton_batalla.esta_clickeado(evento):
-            simular_batalla(rondas=5, turno_delay_ms=700)
+            simular_batalla()
 
         if boton_salir.esta_clickeado(evento):
             ejecutando = False
